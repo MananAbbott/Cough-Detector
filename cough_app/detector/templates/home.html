@@ -1,0 +1,65 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Cough Detector</title>
+</head>
+<body style="display: flex; justify-content: center; align-items: center; height: 100vh; margin: 0;">
+    <div style="text-align: center;">
+        <h1 style="margin-bottom: 50px;">Cough Detector</h1>
+        <button id="record" onclick="toggleRecording()" style="height: 20px; width: 100px; background-color: aqua; border-radius: 2cm;">Record</button>
+        <p id="prediction" style="margin-top: 50px; font-size: large;">Prediction</p>
+    </div>
+    <script>
+        let mediaRecorder;
+        let chunks = [];
+        let recording = false;
+
+        async function startRecording() {
+            const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+            mediaRecorder = new MediaRecorder(stream);
+
+            mediaRecorder.addEventListener("dataavailable", event => {
+                chunks.push(event.data);
+            });
+
+            mediaRecorder.addEventListener("stop", async () => {
+                const blob = new Blob(chunks, { type: mediaRecorder.mimeType });
+                const formData = new FormData();
+                formData.append("audio", blob, 'recorded');
+
+                // // For debugging: Play the audio to ensure it's recorded correctly
+                // const audioURL = URL.createObjectURL(blob);
+                // const audio = new Audio(audioURL);
+                // audio.play();
+
+                fetch("{% url 'predict' %}", {
+                    method: "POST",
+                    body: formData
+                }).then(response => response.json()).then(data => {
+                    document.getElementById("prediction").innerHTML = data.response;
+                });
+
+                chunks = [];
+            });
+
+            mediaRecorder.start();
+        }
+
+        function stopRecording() {
+            mediaRecorder.stop();
+        }
+
+        function toggleRecording() {
+            if (recording) {
+                stopRecording();
+                recording = false;
+                document.getElementById("record").innerHTML = "Record";
+            } else {
+                startRecording();
+                recording = true;
+                document.getElementById("record").innerHTML = "Stop";
+            }
+        }
+    </script>
+</body>
+</html>
